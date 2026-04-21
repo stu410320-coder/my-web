@@ -2,25 +2,35 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>Camera Test</title>
+<title>Camera + QRCode</title>
+
+<!-- QR Code 套件 -->
+<script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
 body{
-font-family: Arial;
-text-align:center;
-background:#f5f5f5;
+  font-family: Arial;
+  text-align:center;
+  background:#f5f5f5;
 }
 
-video{
-width:90%;
-max-width:500px;
-border-radius:10px;
+video, #reader{
+  width:90%;
+  max-width:500px;
+  border-radius:10px;
 }
 
 button{
-padding:10px 20px;
-margin:10px;
-font-size:16px;
+  padding:10px 20px;
+  margin:10px;
+  font-size:16px;
+}
+
+#result{
+  margin-top:20px;
+  font-size:18px;
+  color:blue;
+  word-break:break-all;
 }
 </style>
 
@@ -28,8 +38,9 @@ font-size:16px;
 
 <body>
 
-<h2>攝影機測試</h2>
+<h2>攝影機 + QR Code 掃描</h2>
 
+<!-- 攝影機 -->
 <video id="video" autoplay playsinline></video>
 
 <br>
@@ -37,36 +48,77 @@ font-size:16px;
 <button onclick="startCamera()">開啟攝影機</button>
 <button onclick="stopCamera()">關閉攝影機</button>
 
+<hr>
+
+<!-- QR Code 掃描區 -->
+<h3>QR Code 掃描</h3>
+
+<div id="reader"></div>
+
+<button onclick="startQR()">開始掃描QR Code</button>
+<button onclick="stopQR()">停止掃描</button>
+
+<div id="result">掃描結果會顯示在這裡</div>
+
 <script>
 
 let stream;
+let qrScanner;
 
+
+/* 攝影機 */
 async function startCamera(){
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:true
+    });
 
-try{
+    document.getElementById("video").srcObject = stream;
 
-stream = await navigator.mediaDevices.getUserMedia({
-video:true
-});
-
-document.getElementById("video").srcObject = stream;
-
-}catch(err){
-
-alert("無法開啟攝影機");
-
-}
-
+  }catch(err){
+    alert("無法開啟攝影機");
+  }
 }
 
 function stopCamera(){
+  if(stream){
+    stream.getTracks().forEach(track=>track.stop());
+  }
+}
 
-if(stream){
 
-stream.getTracks().forEach(track=>track.stop());
+/* QR Code 掃描 */
+function startQR(){
+
+  qrScanner = new Html5Qrcode("reader");
+
+  qrScanner.start(
+    { facingMode: "environment" }, // 後鏡頭
+    {
+      fps: 10,
+      qrbox: 250
+    },
+    (decodedText) => {
+
+      // 掃描成功
+      document.getElementById("result").innerText =
+        "掃描結果：" + decodedText;
+
+      // 停止掃描（可改成不停止）
+      qrScanner.stop();
+
+    },
+    (errorMessage) => {
+      // 可忽略掃描失敗訊息
+    }
+  );
 
 }
 
+function stopQR(){
+  if(qrScanner){
+    qrScanner.stop();
+  }
 }
 
 </script>
