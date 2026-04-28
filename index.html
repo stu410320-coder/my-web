@@ -2,9 +2,9 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>Camera + QRCode</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>攝影機 + QR掃描</title>
 
-<!-- QR Code 套件 -->
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
@@ -14,10 +14,10 @@ body{
   background:#f5f5f5;
 }
 
-video, #reader{
+#reader{
   width:90%;
   max-width:500px;
-  border-radius:10px;
+  margin:auto;
 }
 
 button{
@@ -30,95 +30,58 @@ button{
   margin-top:20px;
   font-size:18px;
   color:blue;
-  word-break:break-all;
 }
 </style>
-
 </head>
 
 <body>
 
 <h2>攝影機 + QR Code 掃描</h2>
 
-<!-- 攝影機 -->
-<video id="video" autoplay playsinline></video>
+<div id="reader"></div>
 
 <br>
 
 <button onclick="startCamera()">開啟攝影機</button>
 <button onclick="stopCamera()">關閉攝影機</button>
 
-<hr>
-
-<!-- QR Code 掃描區 -->
-<h3>QR Code 掃描</h3>
-
-<div id="reader"></div>
-
-<button onclick="startQR()">開始掃描QR Code</button>
-<button onclick="stopQR()">停止掃描</button>
-
 <div id="result">掃描結果會顯示在這裡</div>
 
 <script>
 
-let stream;
-let qrScanner;
+let scanner;
+let isRunning = false;
 
+function startCamera(){
 
-/* 攝影機 */
-async function startCamera(){
-  try{
-    stream = await navigator.mediaDevices.getUserMedia({
-      video:true
-    });
+  if(isRunning) return;
 
-    document.getElementById("video").srcObject = stream;
+  scanner = new Html5Qrcode("reader");
 
-  }catch(err){
-    alert("無法開啟攝影機");
-  }
-}
+  scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    (text) => {
 
-function stopCamera(){
-  if(stream){
-    stream.getTracks().forEach(track=>track.stop());
-  }
-}
-
-
-/* QR Code 掃描 */
-function startQR(){
-
-  qrScanner = new Html5Qrcode("reader");
-
-  qrScanner.start(
-    { facingMode: "environment" }, // 後鏡頭
-    {
-      fps: 10,
-      qrbox: 250
-    },
-    (decodedText) => {
-
-      // 掃描成功
       document.getElementById("result").innerText =
-        "掃描結果：" + decodedText;
+        "掃描結果：" + text;
 
-      // 停止掃描（可改成不停止）
-      qrScanner.stop();
-
-    },
-    (errorMessage) => {
-      // 可忽略掃描失敗訊息
     }
   );
 
+  isRunning = true;
 }
 
-function stopQR(){
-  if(qrScanner){
-    qrScanner.stop();
+function stopCamera(){
+
+  if(scanner && isRunning){
+
+    scanner.stop().then(()=>{
+      isRunning = false;
+    });
+
   }
+
 }
 
 </script>
