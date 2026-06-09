@@ -3,87 +3,180 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>攝影機 + QR掃描</title>
+<title>岡山高中跑班課 —— 攝影機簽到上傳機</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
 body{
-  font-family: Arial;
+  font-family: "Microsoft JhengHei", Arial, sans-serif;
   text-align:center;
-  background:#f5f5f5;
+  background:#f4f6f9;
+  margin: 0;
+  padding: 20px;
 }
-
+.container {
+  background: white;
+  max-width: 500px;
+  margin: auto;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
 #reader{
-  width:90%;
-  max-width:500px;
-  margin:auto;
+  width:100%;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #000;
 }
-
 button{
-  padding:10px 20px;
-  margin:10px;
-  font-size:16px;
+  padding: 12px 24px;
+  margin: 10px 5px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
 }
-
+.btn-start { background-color: #27ae60; color: white; }
+.btn-start:hover { background-color: #219653; }
+.btn-stop { background-color: #7f8c8d; color: white; }
+.btn-stop:hover { background-color: #6c7a7d; }
 #result{
   margin-top:20px;
-  font-size:18px;
-  color:blue;
+  padding: 15px;
+  font-size:16px;
+  font-weight: bold;
+  border-radius: 6px;
+  background: #e8f4fd;
+  color: #2c3e50;
+  border-left: 5px solid #3498db;
+  line-height: 1.6;
+  text-align: left;
 }
+.success-alert { color: #27ae60; }
+.error-alert { color: #e74c3c; }
 </style>
 </head>
 
 <body>
 
-<h2>攝影機 + QR Code 掃描</h2>
+<div class="container">
+  <h2 style="color: #701c22; margin-top:0;">📷 簽到條碼即時上傳機</h2>
+  <p style="color: #666; font-size:13px;">掃描信件 QR code 後，資料會秒速自動同步寫入 QRcodeData 工作表</p>
+https://script.google.com/macros/s/AKfycbxb5OHeK44g-XQoVnUCF7I5g_xKrElIRoKLKVlr0vHcliU4KGHPC5CzROctuIW_ywAyAQ/exec
+  <div id="reader"></div>
 
-<div id="reader"></div>
+  <div class="btn-box">
+    <button class="btn-start" onclick="startCamera()">開啟攝影機</button>
+    <button class="btn-stop" onclick="stopCamera()">關閉攝影機</button>
+  </div>
 
-<br>
-
-<button onclick="startCamera()">開啟攝影機</button>
-<button onclick="stopCamera()">關閉攝影機</button>
-
-<div id="result">掃描結果會顯示在這裡</div>
+  <div id="result">🟢 狀態：等待開啟鏡頭鏡頭...</div>
+</div>
 
 <script>
+// ⚠️ 請在此處換上您重新部署得到的 Google Apps Script (/exec) 網址
+const GAS_WEB_APP_URL = "填入您剛剛複製的exec網址"; 
 
 let scanner;
 let isRunning = false;
+let lastScannedUrl = ""; // 防止同一個條碼一秒內密集重複連發上傳
 
 function startCamera(){
-
   if(isRunning) return;
 
+  document.getElementById("result").innerText = "🔄 正在啟動相機模組...";
   scanner = new Html5Qrcode("reader");
 
   scanner.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    (text) => {
+    { facingMode: "environment" }, // 優先強制啟動後置鏡頭
+    { fps: 10, qrbox: { width: 260, height: 260 } },
+    (decodedText) => {
+      
+      // 如果重複掃到相同網址，直接阻斷
+      if (decodedText === lastScannedUrl) return; 
+      lastScannedUrl = decodedText;
+      
+      // 手機觸發短震動反饋
+      if (navigator.vibrate) navigator.vibrate(100);
 
-      document.getElementById("result").innerText =
-        "掃描結果：" + text;
+      document.getElementById("result").innerHTML = "⚡ <b>解碼成功！</b>正在解析參數並上傳至 Google 試算表...";
 
-    }
-  );
+      // 檢查掃到的內容是否包含我們系統設計的 id 參數
+      if (decodedText.indexOf("id=") !== -1) {
+        
+        // 1. 利用 URL 運算解析器自動拆解網址中的參數
+        try {
+          let urlParams = new URLSearchParams(decodedText.split('?')[1]);
+          let id = urlParams.get('id');
+          let date = urlParams.get('date');
+          let period = urlParams.get('period');
 
-  isRunning = true;
+          // 2. 組裝傳給試算表的終端 API 連線網址
+          let uploadUrl = `${GAS_WEB_APP_URL}?action=uploadScanData&id=${encodeURIComponent(id)}&date=${encodeURIComponent(date)}&period=${encodeURIComponent(period)}`;
+
+          // 3. 非同步跨網域發送資料給試算表
+          fetch(uploadUrl)
+            .then(response => response.json())
+            .then(res => {
+              if (res.status === "success") {
+                document.getElementById("result").style.borderColor = "#27ae60";
+                document.getElementById("result").style.background = "#e8f8f5";
+                document.getElementById("result").innerHTML = `
+                  <span class="success-alert">✅ 上傳成功！紀錄已寫入 QRcodeData</span><br>
+                  <small>📋 學生學號：${id}<br>📅 課程節次：${period} (${date})</small>
+                `;
+              } else {
+                document.getElementById("result").style.borderColor = "#e74c3c";
+                document.getElementById("result").innerHTML = `<span class="error-alert">❌ 上傳失敗：${res.message}</span>`;
+              }
+              
+              // 3.5 秒後將畫面回撥成等待下一位狀態
+              resetScannerDelay();
+            })
+            .catch(err => {
+              document.getElementById("result").innerHTML = "<span class='error-alert'>❌ 連線試算表伺服器失敗，請確認網路是否通暢。</span>";
+              resetScannerDelay();
+            });
+
+        } catch (error) {
+          document.getElementById("result").innerHTML = "<span class='error-alert'>❌ 網址參數拆解失敗，請確認條碼格式。</span>";
+          resetScannerDelay();
+        }
+
+      } else {
+        document.getElementById("result").innerHTML = `<span class="error-alert">⚠️ 非本點名系統簽到範圍之 QR Code 條碼！內容為：<br><code style="font-size:12px;">${decodedText}</code></span>`;
+        resetScannerDelay();
+      }
+    },
+    (errorMessage) => { /* 靜默過濾未正確對焦時產生的掃描噪音錯誤 */ }
+  ).then(() => {
+    isRunning = true;
+    document.getElementById("result").innerText = "🔲 鏡頭已準備就緒，請將學生的簽到條碼置於框線內。";
+  }).catch(err => {
+    document.getElementById("result").innerText = "❌ 無法取得相機權限，請確認瀏覽器是否允許相機隱私授權。";
+  });
+}
+
+function resetScannerDelay() {
+  setTimeout(() => {
+    lastScannedUrl = "";
+    document.getElementById("result").innerText = "🔲 系統恢復就緒，請對準下一位學生的 QR Code。";
+    document.getElementById("result").style.background = "#e8f4fd";
+    document.getElementById("result").style.borderColor = "#3498db";
+  }, 3500);
 }
 
 function stopCamera(){
-
   if(scanner && isRunning){
-
     scanner.stop().then(()=>{
       isRunning = false;
+      document.getElementById("result").innerText = "🟢 狀態：鏡頭已關閉，暫停接收點名資料。";
     });
-
   }
-
 }
-
 </script>
 
 </body>
