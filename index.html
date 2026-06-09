@@ -3,180 +3,317 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>岡山高中跑班課 —— 攝影機簽到上傳機</title>
+<title>岡山高中跑班課 —— 點名整合系統</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
-body{
-  font-family: "Microsoft JhengHei", Arial, sans-serif;
-  text-align:center;
-  background:#f4f6f9;
-  margin: 0;
-  padding: 20px;
-}
-.container {
-  background: white;
-  max-width: 500px;
-  margin: auto;
-  padding: 25px;
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-#reader{
-  width:100%;
-  border-radius: 6px;
-  overflow: hidden;
-  background: #000;
-}
-button{
-  padding: 12px 24px;
-  margin: 10px 5px;
-  font-size: 16px;
-  font-weight: bold;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.btn-start { background-color: #27ae60; color: white; }
-.btn-start:hover { background-color: #219653; }
-.btn-stop { background-color: #7f8c8d; color: white; }
-.btn-stop:hover { background-color: #6c7a7d; }
-#result{
-  margin-top:20px;
-  padding: 15px;
-  font-size:16px;
-  font-weight: bold;
-  border-radius: 6px;
-  background: #e8f4fd;
-  color: #2c3e50;
-  border-left: 5px solid #3498db;
-  line-height: 1.6;
-  text-align: left;
-}
-.success-alert { color: #27ae60; }
-.error-alert { color: #e74c3c; }
+  body { font-family: "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f6f9; color: #333; }
+  .header-banner { background: #701c22; color: white; padding: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+  .header-banner h1 { margin: 0; font-size: 24px; }
+  
+  /* 頁籤控制項 */
+  .nav-tabs { display: flex; justify-content: center; background: #e2e8f0; border-bottom: 2px solid #cbd5e1; }
+  .tab-link { padding: 15px 30px; font-size: 16px; font-weight: bold; color: #475569; cursor: pointer; border: none; background: none; outline: none; transition: 0.2s; }
+  .tab-link:hover { background: #cbd5e1; color: #0f172a; }
+  .tab-link.active { background: white; color: #701c22; border-top: 4px solid #701c22; font-weight: 900; }
+  
+  .container { max-width: 1050px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* 發信系統樣式 */
+  .btn-group { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  button.action-btn { padding: 10px 20px; font-size: 14px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; color: white; }
+  .btn-green { background-color: #27ae60; }
+  .btn-orange { background-color: #e67e22; }
+  #counter { font-size: 14px; font-weight: bold; color: #2c3e50; background: #e8f4fd; padding: 8px 15px; border-radius: 4px; }
+  .table-responsive { width: 100%; overflow-x: auto; max-height: 480px; margin-top: 10px; border: 1px solid #e2e8f0; }
+  table { width: 100%; border-collapse: collapse; text-align: left; }
+  th, td { border: 1px solid #e2e8f0; padding: 12px; font-size: 14px; }
+  th { background-color: #f8fafc; color: #475569; position: sticky; top: 0; z-index: 10; }
+  tr:hover { background-color: #f8fafc; }
+  .chk-box { transform: scale(1.4); cursor: pointer; }
+
+  /* 攝影機系統樣式 */
+  .camera-box { max-width: 500px; margin: auto; text-align: center; }
+  #reader { width: 100%; border-radius: 6px; overflow: hidden; background: black; }
+  #scan-result { margin-top: 15px; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 6px; background: #e8f4fd; border-left: 5px solid #3498db; text-align: left; }
+  
+  #global-progress { display: none; background: #fff3cd; color: #856404; padding: 12px; margin-bottom: 15px; border-left: 6px solid #ffc107; font-weight: bold; border-radius: 4px; text-align: center; }
 </style>
 </head>
-
 <body>
 
-<div class="container">
-  <h2 style="color: #701c22; margin-top:0;">📷 簽到條碼即時上傳機</h2>
-  <p style="color: #666; font-size:13px;">掃描信件 QR code 後，資料會秒速自動同步寫入 QRcodeData 工作表</p>
-https://script.google.com/macros/s/AKfycbxb5OHeK44g-XQoVnUCF7I5g_xKrElIRoKLKVlr0vHcliU4KGHPC5CzROctuIW_ywAyAQ/exec
-  <div id="reader"></div>
+<div class="header-banner">
+  <h1>岡山高中跑班選修課 ── 二合一智慧點名後台</h1>
+</div>
 
-  <div class="btn-box">
-    <button class="btn-start" onclick="startCamera()">開啟攝影機</button>
-    <button class="btn-stop" onclick="stopCamera()">關閉攝影機</button>
+<div class="nav-tabs">
+  <button class="tab-link active" onclick="switchTab('tab-email')">📧 勾選學生群發信</button>
+  <button class="tab-link" onclick="switchTab('tab-camera')">📷 攝影機掃描上傳機</button>
+</div>
+
+<div class="container">
+  
+  <div id="global-progress">正在連線安全資料庫，請稍候...</div>
+
+  <div id="tab-email" class="tab-content active">
+    <div class="btn-group">
+      <button class="action-btn btn-green" id="btnRun" onclick="processEmailQueue(false)">✉️ 發送選修點名信 (給勾選學生)</button>
+      <button class="action-btn btn-orange" id="btnTest" onclick="processEmailQueue(true)">🧪 發送測試信 (給老師自己)</button>
+      <div id="counter">已勾選：0 筆學生</div>
+    </div>
+    
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 50px; text-align: center;"><input type="checkbox" id="selectAll" class="chk-box" onchange="toggleAllStudents(this)"></th>
+            <th>序號</th><th>班級</th><th>座號</th><th>學號 (識別碼)</th><th>姓名</th><th>學生信箱 (F欄)</th>
+          </tr>
+        </thead>
+        <tbody id="studentTableBody">
+          <tr><td colspan="6" style="text-align:center; color:#666;">🔄 正在從試算表抓取最新「全校名單」，請稍候...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+https://script.google.com/macros/s/AKfycbxvQ6aEbE5DdE4_sCjaSxmbpjnDR7Q0mB1QMBqvjYBusdpXBoywPLOHc0jAF-_W-vr4lw/exec
+  <div id="tab-camera" class="tab-content">
+    <div class="camera-box">
+      <h3 style="color:#701c22; margin-top:0;">📷 公用掃描點名登錄</h3>
+      <p style="color:#666; font-size:13px; margin-bottom:15px;">請將學生手機收到的信件 QR Code 置於下方鏡頭前掃描</p>
+      
+      <div id="reader"></div>
+      
+      <div style="margin: 15px 0;">
+        <button class="action-btn btn-green" onclick="startQRScanner()">開啟掃描鏡頭</button>
+        <button class="action-btn btn-orange" style="background:#7f8c8d;" onclick="stopQRScanner()">關閉鏡頭</button>
+      </div>
+      
+      <div id="scan-result">🟢 狀態：等待開啟攝影機鏡頭...</div>
+    </div>
   </div>
 
-  <div id="result">🟢 狀態：等待開啟鏡頭鏡頭...</div>
 </div>
 
 <script>
-// ⚠️ 請在此處換上您重新部署得到的 Google Apps Script (/exec) 網址
-const GAS_WEB_APP_URL = "填入您剛剛複製的exec網址"; 
+  // ⚠️ 非常重要：請換成您在 Google Apps Script 部署得到的「網頁應用程式網址(/exec)」
+  const GAS_WEB_APP_URL = "您的_GAS_正式部署_exec_網址"; 
 
-let scanner;
-let isRunning = false;
-let lastScannedUrl = ""; // 防止同一個條碼一秒內密集重複連發上傳
+  var rawStudentList = [];
+  let html5Scanner;
+  let isScannerRunning = false;
+  let lastScannedUrl = "";
 
-function startCamera(){
-  if(isRunning) return;
-
-  document.getElementById("result").innerText = "🔄 正在啟動相機模組...";
-  scanner = new Html5Qrcode("reader");
-
-  scanner.start(
-    { facingMode: "environment" }, // 優先強制啟動後置鏡頭
-    { fps: 10, qrbox: { width: 260, height: 260 } },
-    (decodedText) => {
-      
-      // 如果重複掃到相同網址，直接阻斷
-      if (decodedText === lastScannedUrl) return; 
-      lastScannedUrl = decodedText;
-      
-      // 手機觸發短震動反饋
-      if (navigator.vibrate) navigator.vibrate(100);
-
-      document.getElementById("result").innerHTML = "⚡ <b>解碼成功！</b>正在解析參數並上傳至 Google 試算表...";
-
-      // 檢查掃到的內容是否包含我們系統設計的 id 參數
-      if (decodedText.indexOf("id=") !== -1) {
-        
-        // 1. 利用 URL 運算解析器自動拆解網址中的參數
-        try {
-          let urlParams = new URLSearchParams(decodedText.split('?')[1]);
-          let id = urlParams.get('id');
-          let date = urlParams.get('date');
-          let period = urlParams.get('period');
-
-          // 2. 組裝傳給試算表的終端 API 連線網址
-          let uploadUrl = `${GAS_WEB_APP_URL}?action=uploadScanData&id=${encodeURIComponent(id)}&date=${encodeURIComponent(date)}&period=${encodeURIComponent(period)}`;
-
-          // 3. 非同步跨網域發送資料給試算表
-          fetch(uploadUrl)
-            .then(response => response.json())
-            .then(res => {
-              if (res.status === "success") {
-                document.getElementById("result").style.borderColor = "#27ae60";
-                document.getElementById("result").style.background = "#e8f8f5";
-                document.getElementById("result").innerHTML = `
-                  <span class="success-alert">✅ 上傳成功！紀錄已寫入 QRcodeData</span><br>
-                  <small>📋 學生學號：${id}<br>📅 課程節次：${period} (${date})</small>
-                `;
-              } else {
-                document.getElementById("result").style.borderColor = "#e74c3c";
-                document.getElementById("result").innerHTML = `<span class="error-alert">❌ 上傳失敗：${res.message}</span>`;
-              }
-              
-              // 3.5 秒後將畫面回撥成等待下一位狀態
-              resetScannerDelay();
-            })
-            .catch(err => {
-              document.getElementById("result").innerHTML = "<span class='error-alert'>❌ 連線試算表伺服器失敗，請確認網路是否通暢。</span>";
-              resetScannerDelay();
-            });
-
-        } catch (error) {
-          document.getElementById("result").innerHTML = "<span class='error-alert'>❌ 網址參數拆解失敗，請確認條碼格式。</span>";
-          resetScannerDelay();
+  // 網頁初始化：自動載入名單
+  window.onload = function() {
+    let pBox = document.getElementById('global-progress');
+    pBox.style.display = 'block';
+    
+    fetch(`${GAS_WEB_APP_URL}?action=getStudents`)
+      .then(response => response.json())
+      .then(res => {
+        pBox.style.display = 'none';
+        if (res.status === "success") {
+          rawStudentList = res.data;
+          renderStudentTable(res.data);
+        } else {
+          alert("名單資料加載失敗！");
         }
+      })
+      .catch(err => {
+        pBox.style.background = "#f8d7da"; pBox.style.color = "#721c24";
+        pBox.innerText = "❌ 無法對接試算表後端，請確認您的 GAS 已正式發布為「任何人」均可存取。";
+      });
+  };
 
-      } else {
-        document.getElementById("result").innerHTML = `<span class="error-alert">⚠️ 非本點名系統簽到範圍之 QR Code 條碼！內容為：<br><code style="font-size:12px;">${decodedText}</code></span>`;
-        resetScannerDelay();
-      }
-    },
-    (errorMessage) => { /* 靜默過濾未正確對焦時產生的掃描噪音錯誤 */ }
-  ).then(() => {
-    isRunning = true;
-    document.getElementById("result").innerText = "🔲 鏡頭已準備就緒，請將學生的簽到條碼置於框線內。";
-  }).catch(err => {
-    document.getElementById("result").innerText = "❌ 無法取得相機權限，請確認瀏覽器是否允許相機隱私授權。";
-  });
-}
+  // 頁籤切換控制
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-link').forEach(el => el.classList.remove('active'));
+    
+    document.getElementById(tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
+    
+    // 如果切換離開發相機頁面，自動關掉鏡頭省電
+    if (tabId !== 'tab-camera' && isScannerRunning) {
+      stopQRScanner();
+    }
+  }
 
-function resetScannerDelay() {
-  setTimeout(() => {
-    lastScannedUrl = "";
-    document.getElementById("result").innerText = "🔲 系統恢復就緒，請對準下一位學生的 QR Code。";
-    document.getElementById("result").style.background = "#e8f4fd";
-    document.getElementById("result").style.borderColor = "#3498db";
-  }, 3500);
-}
-
-function stopCamera(){
-  if(scanner && isRunning){
-    scanner.stop().then(()=>{
-      isRunning = false;
-      document.getElementById("result").innerText = "🟢 狀態：鏡頭已關閉，暫停接收點名資料。";
+  // 渲染名單表格
+  function renderStudentTable(students) {
+    var tbody = document.getElementById('studentTableBody');
+    tbody.innerHTML = '';
+    if (students.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">⚠️ 全校名單工作表內查無資料。</td></tr>';
+      return;
+    }
+    students.forEach((stu, index) => {
+      tbody.innerHTML += `
+        <tr>
+          <td style="text-align: center;"><input type="checkbox" class="chk-box stu-item" value="${index}" onchange="updateCheckedCount()"></td>
+          <td>${stu.num}</td><td>${stu.className}</td><td>${stu.seatNum}</td><td>${stu.studentId}</td>
+          <td><b>${stu.studentName}</b></td><td>${stu.email}</td>
+        </tr>
+      `;
     });
   }
-}
+
+  function toggleAllStudents(master) {
+    document.querySelectorAll('.stu-item').forEach(c => c.checked = master.checked);
+    updateCheckedCount();
+  }
+
+  function updateCheckedCount() {
+    var checkedBoxes = document.querySelectorAll('.stu-item:checked');
+    document.getElementById('counter').innerText = "已勾選：" + checkedBoxes.length + " 筆學生";
+  }
+
+  // 勾選發信的核心排程系統
+  function processEmailQueue(isTestMode) {
+    var checkedBoxes = document.querySelectorAll('.stu-item:checked');
+    var selectedStudents = [];
+    checkedBoxes.forEach(c => selectedStudents.push(rawStudentList[c.value]));
+
+    if (selectedStudents.length === 0) {
+      alert("請在下方學生清單中，勾選您要發送通知信的學生！");
+      return;
+    }
+
+    if (!confirm(`確定要針對這 ${selectedStudents.length} 位被勾選的學生執行個別化發信與底冊建置嗎？`)) return;
+
+    var pBox = document.getElementById('global-progress');
+    pBox.style.display = 'block';
+    pBox.style.background = "#fff3cd"; pBox.style.color = "#856404";
+    setUIElementsDisabled(true);
+
+    var total = selectedStudents.length;
+    var processed = 0;
+
+    function sendNext() {
+      if (selectedStudents.length === 0) {
+        pBox.style.background = "#d4edda"; pBox.style.color = "#155724";
+        pBox.innerText = `🎉 完工！勾選的 ${total} 筆名單已全數順利發信，底冊同步建檔成功！`;
+        alert("已順利處理完畢所有勾選名單！");
+        document.getElementById('selectAll').checked = false;
+        toggleAllStudents(document.getElementById('selectAll'));
+        setUIElementsDisabled(false);
+        return;
+      }
+
+      var student = selectedStudents.shift();
+      processed++;
+      pBox.innerText = `🚀 正在處理中 (${processed} / ${total})：發信給「${student.studentName}」並登錄底冊中...`;
+
+      fetch(`${GAS_WEB_APP_URL}?action=sendEmail&isTest=${isTestMode}&student=${encodeURIComponent(JSON.stringify(student))}`)
+        .then(response => response.json())
+        .then(res => {
+          if (res.status === "success") {
+            sendNext();
+          } else {
+            alert(`在處理 ${student.studentName} 時後端發生錯誤：` + res.message);
+            setUIElementsDisabled(false);
+          }
+        })
+        .catch(err => {
+          alert(`網路中斷，發送失敗！`);
+          setUIElementsDisabled(false);
+        });
+    }
+
+    sendNext();
+  }
+
+  function setUIElementsDisabled(disabled) {
+    document.getElementById('btnRun').disabled = disabled;
+    document.getElementById('btnTest').disabled = disabled;
+    document.querySelectorAll('.chk-box').forEach(c => c.disabled = disabled);
+  }
+
+  // =================================================================
+  // 📷 攝影機打卡控制區段
+  // =================================================================
+  function startQRScanner() {
+    if (isScannerRunning) return;
+    document.getElementById("scan-result").innerText = "🔄 正在取得鏡頭授權...";
+    html5Scanner = new Html5Qrcode("reader");
+
+    html5Scanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      (decodedText) => {
+        if (decodedText === lastScannedUrl) return; 
+        lastScannedUrl = decodedText;
+
+        if (navigator.vibrate) navigator.vibrate(100);
+        document.getElementById("scan-result").innerHTML = "⚡ <b>條碼成功解碼！</b>正在上傳至 QRcodeData 工作表...";
+
+        if (decodedText.indexOf("id=") !== -1) {
+          try {
+            let urlParams = new URLSearchParams(decodedText.split('?')[1]);
+            let id = urlParams.get('id');
+            let date = urlParams.get('date');
+            let period = urlParams.get('period');
+
+            let uploadUrl = `${GAS_WEB_APP_URL}?action=uploadScanData&id=${encodeURIComponent(id)}&date=${encodeURIComponent(date)}&period=${encodeURIComponent(period)}`;
+
+            fetch(uploadUrl)
+              .then(response => response.json())
+              .then(res => {
+                if (res.status === "success") {
+                  document.getElementById("scan-result").style.borderColor = "#27ae60";
+                  document.getElementById("scan-result").style.background = "#e8f8f5";
+                  document.getElementById("scan-result").innerHTML = `
+                    <span style="color:#27ae60;">✅ 成功寫入雲端！</span><br>
+                    <small>📋 學生：${id} / 節次：${period}</small>
+                  `;
+                } else {
+                  document.getElementById("scan-result").innerHTML = `<span style="color:red;">❌ 上傳失敗：${res.message}</span>`;
+                }
+                resetScannerStatusDelay();
+              })
+              .catch(err => {
+                document.getElementById("scan-result").innerHTML = "<span style='color:red;'>❌ 後端連線異常</span>";
+                resetScannerStatusDelay();
+              });
+          } catch (e) {
+            document.getElementById("scan-result").innerHTML = "<span style='color:red;'>❌ 解析條碼網址參數失敗</span>";
+            resetScannerStatusDelay();
+          }
+        } else {
+          document.getElementById("scan-result").innerHTML = "<span style='color:red;'>⚠️ 非合規點名條碼！</span>";
+          resetScannerStatusDelay();
+        }
+      },
+      (err) => {}
+    ).then(() => {
+      isScannerRunning = true;
+      document.getElementById("scan-result").innerText = "🔲 鏡頭啟動成功！請對準學生通知信的 QR Code 圖片。";
+    }).catch(err => {
+      document.getElementById("scan-result").innerText = "❌ 相機鏡頭開啟失敗。";
+    });
+  }
+
+  function resetScannerStatusDelay() {
+    setTimeout(() => {
+      lastScannedUrl = "";
+      document.getElementById("scan-result").innerText = "🔲 系統恢復就緒，請對準下一位學生的 QR Code。";
+      document.getElementById("scan-result").style.background = "#e8f4fd";
+      document.getElementById("scan-result").style.borderColor = "#3498db";
+    }, 3500);
+  }
+
+  function stopQRScanner() {
+    if (html5Scanner && isScannerRunning) {
+      html5Scanner.stop().then(() => {
+        isScannerRunning = false;
+        document.getElementById("scan-result").innerText = "🟢 狀態：鏡頭已關閉，暫停接收點名。";
+      });
+    }
+  }
 </script>
 
 </body>
