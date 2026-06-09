@@ -26,9 +26,14 @@
   .btn-group { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   button.action-btn { padding: 10px 20px; font-size: 14px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; color: white; }
   .btn-green { background-color: #27ae60; }
+  .btn-green:hover { background-color: #219653; }
   .btn-orange { background-color: #e67e22; }
+  .btn-orange:hover { background-color: #d35400; }
+  .btn-blue { background-color: #3498db; }
+  .btn-blue:hover { background-color: #2980b9; }
   #counter { font-size: 14px; font-weight: bold; color: #2c3e50; background: #e8f4fd; padding: 8px 15px; border-radius: 4px; }
-  .table-responsive { width: 100%; overflow-x: auto; max-height: 480px; margin-top: 10px; border: 1px solid #e2e8f0; }
+  
+  .table-responsive { width: 100%; overflow-x: auto; max-height: 480px; margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 4px; }
   table { width: 100%; border-collapse: collapse; text-align: left; }
   th, td { border: 1px solid #e2e8f0; padding: 12px; font-size: 14px; }
   th { background-color: #f8fafc; color: #475569; position: sticky; top: 0; z-index: 10; }
@@ -37,34 +42,37 @@
 
   /* 攝影機系統樣式 */
   .camera-box { max-width: 500px; margin: auto; text-align: center; }
-  #reader { width: 100%; border-radius: 6px; overflow: hidden; background: black; }
-  #scan-result { margin-top: 15px; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 6px; background: #e8f4fd; border-left: 5px solid #3498db; text-align: left; }
+  #reader { width: 100%; border-radius: 6px; overflow: hidden; background: black; margin-top: 10px; }
+  #scan-result { margin-top: 15px; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 6px; background: #e8f4fd; border-left: 5px solid #3498db; text-align: left; line-height: 1.6; }
   
   #global-progress { display: none; background: #fff3cd; color: #856404; padding: 12px; margin-bottom: 15px; border-left: 6px solid #ffc107; font-weight: bold; border-radius: 4px; text-align: center; }
+  
+  .badge-test { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin-left: 5px; }
 </style>
 </head>
 <body>
 
 <div class="header-banner">
-  <h1>岡山高中跑班選修課 ── 二合一智慧點名後台</h1>
+  <h1>岡山高中跑班選修課 ── 二合一智慧點名系統</h1>
 </div>
 
 <div class="nav-tabs">
-  <button class="tab-link active" onclick="switchTab('tab-email')">📧 勾選學生群發信</button>
-  <button class="tab-link" onclick="switchTab('tab-camera')">📷 攝影機掃描上傳機</button>
+  <button id="link-email" class="tab-link active" onclick="switchTab('tab-email', this)">📧 功能一：勾選學生群發信</button>
+  <button id="link-camera" class="tab-link" onclick="switchTab('tab-camera', this)">📷 功能二：相機掃描上傳機</button>
 </div>
 
 <div class="container">
   
-  <div id="global-progress">正在連線安全資料庫，請稍候...</div>
+  <div id="global-progress">系統初使化：正在安全連線試算表...</div>
 
   <div id="tab-email" class="tab-content active">
     <div class="btn-group">
       <button class="action-btn btn-green" id="btnRun" onclick="processEmailQueue(false)">✉️ 發送選修點名信 (給勾選學生)</button>
       <button class="action-btn btn-orange" id="btnTest" onclick="processEmailQueue(true)">🧪 發送測試信 (給老師自己)</button>
+      <button class="action-btn btn-blue" onclick="loadStudentListFromServer()">🔄 刷新/載入名單</button>
       <div id="counter">已勾選：0 筆學生</div>
     </div>
-    
+    https://script.google.com/macros/s/AKfycbxvQ6aEbE5DdE4_sCjaSxmbpjnDR7Q0mB1QMBqvjYBusdpXBoywPLOHc0jAF-_W-vr4lw/exec
     <div class="table-responsive">
       <table>
         <thead>
@@ -74,15 +82,15 @@
           </tr>
         </thead>
         <tbody id="studentTableBody">
-          <tr><td colspan="6" style="text-align:center; color:#666;">🔄 正在從試算表抓取最新「全校名單」，請稍候...</td></tr>
+          <tr><td colspan="6" style="text-align:center; color:#666; padding: 30px;">🔄 正在從雲端下載「全校名單」，請稍候...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
-https://script.google.com/macros/s/AKfycbxvQ6aEbE5DdE4_sCjaSxmbpjnDR7Q0mB1QMBqvjYBusdpXBoywPLOHc0jAF-_W-vr4lw/exec
+
   <div id="tab-camera" class="tab-content">
     <div class="camera-box">
-      <h3 style="color:#701c22; margin-top:0;">📷 公用掃描點名登錄</h3>
+      <h3 style="color:#701c22; margin-top:0;">📷 公用打卡相機鏡頭</h3>
       <p style="color:#666; font-size:13px; margin-bottom:15px;">請將學生手機收到的信件 QR Code 置於下方鏡頭前掃描</p>
       
       <div id="reader"></div>
@@ -100,18 +108,27 @@ https://script.google.com/macros/s/AKfycbxvQ6aEbE5DdE4_sCjaSxmbpjnDR7Q0mB1QMBqvj
 
 <script>
   // ⚠️ 非常重要：請換成您在 Google Apps Script 部署得到的「網頁應用程式網址(/exec)」
-  const GAS_WEB_APP_URL = "您的_GAS_正式部署_exec_網址"; 
+  const GAS_WEB_APP_URL = "YOUR_GAS_WEB_APP_URL"; 
 
   var rawStudentList = [];
   let html5Scanner;
   let isScannerRunning = false;
   let lastScannedUrl = "";
 
-  // 網頁初始化：自動載入名單
+  // 網頁開啟時，自動與 Google 試算表同步資料
   window.onload = function() {
+    loadStudentListFromServer();
+  };
+
+  // 從 Google Apps Script 抓取全校名單
+  function loadStudentListFromServer() {
     let pBox = document.getElementById('global-progress');
     pBox.style.display = 'block';
+    pBox.style.background = "#fff3cd"; pBox.style.color = "#856404";
+    pBox.innerText = "🔄 正在連線後端資料庫，讀取最新「全校名單」...";
     
+    document.getElementById('studentTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center; color:#666; padding:30px;">🔄 正在載入試算表名單中，請稍後...</td></tr>';
+
     fetch(`${GAS_WEB_APP_URL}?action=getStudents`)
       .then(response => response.json())
       .then(res => {
@@ -120,46 +137,57 @@ https://script.google.com/macros/s/AKfycbxvQ6aEbE5DdE4_sCjaSxmbpjnDR7Q0mB1QMBqvj
           rawStudentList = res.data;
           renderStudentTable(res.data);
         } else {
-          alert("名單資料加載失敗！");
+          alert("名單資料加載失敗，請檢查工作表名稱是否為【全校名單】");
         }
       })
       .catch(err => {
         pBox.style.background = "#f8d7da"; pBox.style.color = "#721c24";
-        pBox.innerText = "❌ 無法對接試算表後端，請確認您的 GAS 已正式發布為「任何人」均可存取。";
+        pBox.innerText = "❌ 連線失敗：請確認您的 Google Apps Script 專案已確實進行「正式部署」並允許「任何人」存取！";
       });
-  };
+  }
 
-  // 頁籤切換控制
-  function switchTab(tabId) {
+  // 頁籤切換控制項目 (優化版：徹底防止 event 報錯導致網頁當掉)
+  function switchTab(tabId, clickedButton) {
+    // 1. 隱藏所有分頁，移除所有按鈕 active 樣式
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-link').forEach(el => el.classList.remove('active'));
     
+    // 2. 顯示指定分頁
     document.getElementById(tabId).classList.add('active');
-    event.currentTarget.classList.add('active');
     
-    // 如果切換離開發相機頁面，自動關掉鏡頭省電
+    // 3. 亮起點選的按鈕
+    if (clickedButton) {
+      clickedButton.classList.add('active');
+    }
+
+    // 4. 安全保護：如果切換離開發相機頁面，自動關掉鏡頭省電
     if (tabId !== 'tab-camera' && isScannerRunning) {
       stopQRScanner();
     }
   }
 
-  // 渲染名單表格
+  // 將資料轉化為畫面上的表格
   function renderStudentTable(students) {
     var tbody = document.getElementById('studentTableBody');
     tbody.innerHTML = '';
-    if (students.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">⚠️ 全校名單工作表內查無資料。</td></tr>';
+    if (!students || students.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red; padding:30px;">⚠️ 全校名單工作表內查無任何學生資料。</td></tr>';
       return;
     }
     students.forEach((stu, index) => {
       tbody.innerHTML += `
         <tr>
           <td style="text-align: center;"><input type="checkbox" class="chk-box stu-item" value="${index}" onchange="updateCheckedCount()"></td>
-          <td>${stu.num}</td><td>${stu.className}</td><td>${stu.seatNum}</td><td>${stu.studentId}</td>
-          <td><b>${stu.studentName}</b></td><td>${stu.email}</td>
+          <td>${stu.num}</td>
+          <td>${stu.className}</td>
+          <td>${stu.seatNum}</td>
+          <td><code>${stu.studentId}</code></td>
+          <td><b>${stu.studentName}</b></td>
+          <td>${stu.email}</td>
         </tr>
       `;
     });
+    updateCheckedCount();
   }
 
   function toggleAllStudents(master) {
@@ -172,18 +200,19 @@ https://script.google.com/macros/s/AKfycbxvQ6aEbE5DdE4_sCjaSxmbpjnDR7Q0mB1QMBqvj
     document.getElementById('counter').innerText = "已勾選：" + checkedBoxes.length + " 筆學生";
   }
 
-  // 勾選發信的核心排程系統
+  // 勾選發信的核心非同步處理器
   function processEmailQueue(isTestMode) {
     var checkedBoxes = document.querySelectorAll('.stu-item:checked');
     var selectedStudents = [];
     checkedBoxes.forEach(c => selectedStudents.push(rawStudentList[c.value]));
 
     if (selectedStudents.length === 0) {
-      alert("請在下方學生清單中，勾選您要發送通知信的學生！");
+      alert("請先在下方名單中，勾選您要發送通知信的學生！");
       return;
     }
 
-    if (!confirm(`確定要針對這 ${selectedStudents.length} 位被勾選的學生執行個別化發信與底冊建置嗎？`)) return;
+    var modeText = isTestMode ? "【測試模式：信件全寄給老師自己】" : "【正式模式：信件將直接寄給學生】";
+    if (!confirm(`確定要針對這 ${selectedStudents.length} 位被勾選的學生執行個別化發信嗎？\n\n目前模式：${modeText}`)) return;
 
     var pBox = document.getElementById('global-progress');
     pBox.style.display = 'block';
@@ -196,7 +225,7 @@ https://script.google.com/macros/s/AKfycbxvQ6aEbE5DdE4_sCjaSxmbpjnDR7Q0mB1QMBqvj
     function sendNext() {
       if (selectedStudents.length === 0) {
         pBox.style.background = "#d4edda"; pBox.style.color = "#155724";
-        pBox.innerText = `🎉 完工！勾選的 ${total} 筆名單已全數順利發信，底冊同步建檔成功！`;
+        pBox.innerText = `🎉 完工！已順利完成全部 ${total} 筆信件發送，底冊已同步建置！`;
         alert("已順利處理完畢所有勾選名單！");
         document.getElementById('selectAll').checked = false;
         toggleAllStudents(document.getElementById('selectAll'));
@@ -219,7 +248,7 @@ https://script.google.com/macros/s/AKfycbxvQ6aEbE5DdE4_sCjaSxmbpjnDR7Q0mB1QMBqvj
           }
         })
         .catch(err => {
-          alert(`網路中斷，發送失敗！`);
+          alert(`網路連線異常，發送中斷。`);
           setUIElementsDisabled(false);
         });
     }
@@ -234,7 +263,7 @@ https://script.google.com/macros/s/AKfycbxvQ6aEbE5DdE4_sCjaSxmbpjnDR7Q0mB1QMBqvj
   }
 
   // =================================================================
-  // 📷 攝影機打卡控制區段
+  // 📷 攝影機打卡核心控制區段
   // =================================================================
   function startQRScanner() {
     if (isScannerRunning) return;
@@ -267,8 +296,8 @@ https://script.google.com/macros/s/AKfycbxvQ6aEbE5DdE4_sCjaSxmbpjnDR7Q0mB1QMBqvj
                   document.getElementById("scan-result").style.borderColor = "#27ae60";
                   document.getElementById("scan-result").style.background = "#e8f8f5";
                   document.getElementById("scan-result").innerHTML = `
-                    <span style="color:#27ae60;">✅ 成功寫入雲端！</span><br>
-                    <small>📋 學生：${id} / 節次：${period}</small>
+                    <span style="color:#27ae60; font-size:18px;">✅ 成功寫入 QRcodeData！</span><br>
+                    <small>📋 學生學號：${id}<br>⏰ 登記時段：${period} (${date})</small>
                   `;
                 } else {
                   document.getElementById("scan-result").innerHTML = `<span style="color:red;">❌ 上傳失敗：${res.message}</span>`;
@@ -276,7 +305,7 @@ https://script.google.com/macros/s/AKfycbxvQ6aEbE5DdE4_sCjaSxmbpjnDR7Q0mB1QMBqvj
                 resetScannerStatusDelay();
               })
               .catch(err => {
-                document.getElementById("scan-result").innerHTML = "<span style='color:red;'>❌ 後端連線異常</span>";
+                document.getElementById("scan-result").innerHTML = "<span style='color:red;'>❌ 後端伺服器響應異常</span>";
                 resetScannerStatusDelay();
               });
           } catch (e) {
@@ -293,7 +322,7 @@ https://script.google.com/macros/s/AKfycbxvQ6aEbE5DdE4_sCjaSxmbpjnDR7Q0mB1QMBqvj
       isScannerRunning = true;
       document.getElementById("scan-result").innerText = "🔲 鏡頭啟動成功！請對準學生通知信的 QR Code 圖片。";
     }).catch(err => {
-      document.getElementById("scan-result").innerText = "❌ 相機鏡頭開啟失敗。";
+      document.getElementById("scan-result").innerText = "❌ 相機鏡頭開啟失敗，請確認網頁是否擁有相機存取權限。";
     });
   }
 
