@@ -46,8 +46,6 @@
   #scan-result { margin-top: 15px; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 6px; background: #e8f4fd; border-left: 5px solid #3498db; text-align: left; line-height: 1.6; }
   
   #global-progress { display: none; background: #fff3cd; color: #856404; padding: 12px; margin-bottom: 15px; border-left: 6px solid #ffc107; font-weight: bold; border-radius: 4px; text-align: center; }
-  
-  .badge-test { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin-left: 5px; }
 </style>
 </head>
 <body>
@@ -63,7 +61,7 @@
 
 <div class="container">
   
-  <div id="global-progress">系統初使化：正在安全連線試算表...</div>
+  <div id="global-progress">系統初始化：正在安全連線試算表...</div>
 
   <div id="tab-email" class="tab-content active">
     <div class="btn-group">
@@ -72,7 +70,7 @@
       <button class="action-btn btn-blue" onclick="loadStudentListFromServer()">🔄 刷新/載入名單</button>
       <div id="counter">已勾選：0 筆學生</div>
     </div>
-
+    
     <div class="table-responsive">
       <table>
         <thead>
@@ -107,9 +105,9 @@
 </div>
 
 <script>
-  // ⚠️ 非常重要：請換成您在 Google Apps Script 部署得到的「網頁應用程式網址(/exec)」
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/您的網址代碼/exec";
-https://script.google.com/macros/s/AKfycbz_Nn6JNd9142IL88wzsLdFa6fAyOZjwGNFbMA3Tl313cbqUWX0WWcrFz4nwyHnZTYVAw/exec
+  // ⚠️ 非常重要：請更換為您在 Google Apps Script 部署得到的「網頁應用程式網址(/exec)」
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz_Nn6JNd9142IL88wzsLdFa6fAyOZjwGNFbMA3Tl313cbqUWX0WWcrFz4nwyHnZTYVAw/exec"; 
+
   var rawStudentList = [];
   let html5Scanner;
   let isScannerRunning = false;
@@ -146,7 +144,7 @@ https://script.google.com/macros/s/AKfycbz_Nn6JNd9142IL88wzsLdFa6fAyOZjwGNFbMA3T
       });
   }
 
-  // 頁籤切換控制項目 (優化版：徹底防止 event 報錯導致網頁當掉)
+  // 頁籤切換控制項目
   function switchTab(tabId, clickedButton) {
     // 1. 隱藏所有分頁，移除所有按鈕 active 樣式
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -160,7 +158,7 @@ https://script.google.com/macros/s/AKfycbz_Nn6JNd9142IL88wzsLdFa6fAyOZjwGNFbMA3T
       clickedButton.classList.add('active');
     }
 
-    // 4. 安全保護：如果切換離開發相機頁面，自動關掉鏡頭省電
+    // 4. 安全保護：如果切換離開發相機頁面，自動關掉鏡頭
     if (tabId !== 'tab-camera' && isScannerRunning) {
       stopQRScanner();
     }
@@ -200,7 +198,7 @@ https://script.google.com/macros/s/AKfycbz_Nn6JNd9142IL88wzsLdFa6fAyOZjwGNFbMA3T
     document.getElementById('counter').innerText = "已勾選：" + checkedBoxes.length + " 筆學生";
   }
 
-  // 勾選發信的核心非同步處理器
+  // 勾選發信的核心處理器
   function processEmailQueue(isTestMode) {
     var checkedBoxes = document.querySelectorAll('.stu-item:checked');
     var selectedStudents = [];
