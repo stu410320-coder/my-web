@@ -22,9 +22,15 @@
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
-  /* 發信系統樣式 */
+  /* 發信系統與篩選區樣式 */
+  .filter-panel { background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 15px; display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
+  .filter-group { display: flex; align-items: center; gap: 8px; }
+  .filter-group label { font-weight: bold; font-size: 14px; color: #475569; }
+  .filter-control { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; outline: none; }
+  .filter-control:focus { border-color: #701c22; }
+
   .btn-group { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  button.action-btn { padding: 10px 20px; font-size: 14px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; color: white; }
+  button.action-btn { padding: 10px 20px; font-size: 14px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; color: white; transition: 0.2s; }
   .btn-green { background-color: #27ae60; }
   .btn-green:hover { background-color: #219653; }
   .btn-orange { background-color: #e67e22; }
@@ -64,6 +70,20 @@
   <div id="global-progress">系統初始化：正在安全連線試算表...</div>
 
   <div id="tab-email" class="tab-content active">
+    
+    <div class="filter-panel">
+      <div class="filter-group">
+        <label for="filterClass">選擇班級：</label>
+        <select id="filterClass" class="filter-control" onchange="filterStudents()">
+          <option value="">-- 全部班級 --</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="searchKeyword">關鍵字搜尋 (姓名/座號/學號)：</label>
+        <input type="text" id="searchKeyword" class="filter-control" placeholder="輸入關鍵字..." oninput="filterStudents()">
+      </div>
+    </div>
+
     <div class="btn-group">
       <button class="action-btn btn-green" id="btnRun" onclick="processEmailQueue(false)">✉️ 發送選修點名信 (給勾選學生)</button>
       <button class="action-btn btn-orange" id="btnTest" onclick="processEmailQueue(true)">🧪 發送測試信 (給老師自己)</button>
@@ -106,9 +126,10 @@
 
 <script>
   // ⚠️ 非常重要：請更換為您在 Google Apps Script 部署得到的「網頁應用程式網址(/exec)」
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz_Nn6JNd9142IL88wzsLdFa6fAyOZjwGNFbMA3Tl313cbqUWX0WWcrFz4nwyHnZTYVAw/exec"; 
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxB-pWmFyXRkOp186LMRUD6NVDs4AaVCpKKr8tRx_0m9qUpHY4_K37gGIob-spBZXN78w/exec"; 
 
-  var rawStudentList = [];
+  var rawStudentList = [];      // 儲存從後端抓來的完整原始名單
+  var filteredStudentList = []; // 儲存篩選過後的名單
   let html5Scanner;
   let isScannerRunning = false;
   let lastScannedUrl = "";
@@ -133,7 +154,10 @@
         pBox.style.display = 'none';
         if (res.status === "success") {
           rawStudentList = res.data;
-          renderStudentTable(res.data);
+          filteredStudentList = [...rawStudentList]; // 預設篩選名單等於完整名單
+          
+          buildClassDropdown(rawStudentList);      // 自動產出班級下拉選單
+          renderStudentTable(filteredStudentList);  // 渲染畫面上的表格
         } else {
           alert("名單資料加載失敗，請檢查工作表名稱是否為【全校名單】");
         }
@@ -144,21 +168,60 @@
       });
   }
 
+  // ✨ 動態建立班級下拉選單
+  function buildClassDropdown(students) {
+    const classSelect = document.getElementById('filterClass');
+    // 清空除了第一個之外的選項
+    classSelect.innerHTML = '<option value="">-- 全部班級 --</option>';
+    
+    // 萃取出所有不重複的班級名稱
+    const classes = [...new Set(students.map(s => s.className))];
+    // 排序班級排序
+    classes.sort();
+    
+    classes.forEach(className => {
+      let opt = document.createElement('option');
+      opt.value = className;
+      opt.innerText = className;
+      classSelect.appendChild(opt);
+    });
+  }
+
+  // ✨ 多功能即時篩選器核心邏輯 (支援班級、姓名、座號、學號聯動篩選)
+  function filterStudents() {
+    const classValue = document.getElementById('filterClass').value;
+    const keyword = document.getElementById('searchKeyword').value.trim().toLowerCase();
+    
+    // 取消全選勾選框
+    document.getElementById('selectAll').checked = false;
+
+    filteredStudentList = rawStudentList.filter(student => {
+      // 1. 檢查班級是否符合
+      const matchClass = classValue === "" || student.className === classValue;
+      
+      // 2. 檢查關鍵字是否符合 (姓名、座號、學號、序號)
+      const matchKeyword = keyword === "" || 
+                           student.studentName.toLowerCase().includes(keyword) ||
+                           student.seatNum.toLowerCase().includes(keyword) ||
+                           student.studentId.toLowerCase().includes(keyword) ||
+                           student.num.toString().includes(keyword);
+      
+      return matchClass && matchKeyword;
+    });
+
+    renderStudentTable(filteredStudentList);
+  }
+
   // 頁籤切換控制項目
   function switchTab(tabId, clickedButton) {
-    // 1. 隱藏所有分頁，移除所有按鈕 active 樣式
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-link').forEach(el => el.classList.remove('active'));
     
-    // 2. 顯示指定分頁
     document.getElementById(tabId).classList.add('active');
-    
-    // 3. 亮起點選的按鈕
     if (clickedButton) {
       clickedButton.classList.add('active');
     }
 
-    // 4. 安全保護：如果切換離開發相機頁面，自動關掉鏡頭
     if (tabId !== 'tab-camera' && isScannerRunning) {
       stopQRScanner();
     }
@@ -169,13 +232,14 @@
     var tbody = document.getElementById('studentTableBody');
     tbody.innerHTML = '';
     if (!students || students.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red; padding:30px;">⚠️ 全校名單工作表內查無任何學生資料。</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red; padding:30px;">⚠️ 查無符合條件的學生資料。</td></tr>';
+      updateCheckedCount();
       return;
     }
-    students.forEach((stu, index) => {
+    students.forEach((stu) => {
       tbody.innerHTML += `
         <tr>
-          <td style="text-align: center;"><input type="checkbox" class="chk-box stu-item" value="${index}" onchange="updateCheckedCount()"></td>
+          <td style="text-align: center;"><input type="checkbox" class="chk-box stu-item" value="${stu.studentId}" onchange="updateCheckedCount()"></td>
           <td>${stu.num}</td>
           <td>${stu.className}</td>
           <td>${stu.seatNum}</td>
@@ -201,11 +265,15 @@
   // 勾選發信的核心處理器
   function processEmailQueue(isTestMode) {
     var checkedBoxes = document.querySelectorAll('.stu-item:checked');
-    var selectedStudents = [];
-    checkedBoxes.forEach(c => selectedStudents.push(rawStudentList[c.value]));
+    
+    // 找出畫面上被勾選的學號清單
+    var checkedStudentIds = Array.from(checkedBoxes).map(cb => cb.value);
+    
+    // 對比原始清單，把完整的學生資料物件撈出來
+    var selectedStudents = rawStudentList.filter(s => checkedStudentIds.includes(s.studentId));
 
     if (selectedStudents.length === 0) {
-      alert("請先在下方名單中，勾選您要發送通知信的學生！");
+      alert("請先在下方篩選出的名單中，勾選您要發送通知信的學生！");
       return;
     }
 
